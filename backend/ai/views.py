@@ -4,12 +4,12 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from openai import OpenAI
 import json
-from decouple import config
+import os
 resume_text_storage = ""
 
 client = OpenAI(
     base_url="https://openrouter.ai/api/v1",
-    api_key=config("SECRET_KEY")
+    api_key=os.getenv("SECRET_KEY")
 )
 
 SYSTEM_PROMPT = """You are an expert resume analyst and career advisor assistant.
