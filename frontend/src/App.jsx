@@ -1,5 +1,5 @@
 import {BrowserRouter,Routes,Route} from "react-router-dom"
-import Home from './components/home'
+import Home from './components/Home'
 import Chat from './components/Chat'
 import BuildResumePage from "./components/BuildResumePage"
 import ATSPage from "./components/ATSPage"
