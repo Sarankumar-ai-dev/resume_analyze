@@ -1,0 +1,359 @@
+import { useState, useRef, useEffect } from "react";
+import { Chart as ChartJS,CategoryScale,LinearScale,BarElement,Tooltip,} from "chart.js";
+import { Bar } from "react-chartjs-2";
+
+ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
+
+const BASE = "http://127.0.0.1:8000/api";
+
+const CATEGORIES=["Contact Information","Work Experience","Education","Skills","Keywords","Formatting","Projects",];
+
+const LEVEL_STYLES={
+  Excellent:         {bg:"#e6f4ea",text: "#1a7f37",bar: "#2da44e" },
+  Good:              {bg:"#dbeafe",text: "#1d4ed8",bar: "#2563eb" },
+  Average:           {bg:"#fef9c3",text: "#92400e",bar: "#d97706" },
+  "Needs Improvement":{bg:"#fee2e2",text: "#b91c1c",bar: "#ef4444" },
+};
+
+function scoreColor(s) {
+  if (s >= 75) return "#2da44e";
+  if (s >= 50) return "#2563eb";
+  if (s >= 30) return "#d97706";
+  return "#ef4444";
+}
+
+function ScoreRing({ score, color }){
+  const r=44;
+  const circ=2 * Math.PI * r;
+  const [dash,setDash]=useState(0);
+
+  useEffect(() => {
+    const t =setTimeout(() => setDash((score / 100) * circ),80);
+    return () => clearTimeout(t);
+  },[score,circ]);
+
+  return (
+    <div style={{ position:"relative",width:108,height:108,flexShrink:0}}>
+      <svg width="108" height="108" style={{ transform: "rotate(-90deg)"}}>
+        <circle cx="54" cy="54" r={r} fill="none" stroke="#f1f5f9" strokeWidth="9" />
+        <circle
+          cx="54" cy="54" r={r} fill="none"
+          stroke={color} strokeWidth="9"
+          strokeDasharray={`${dash} ${circ}`}
+          strokeLinecap="round"
+          style={{ transition: "stroke-dasharray 1.1s ease" }}
+        />
+      </svg>
+      <div style={{
+        position: "absolute", inset: 0,
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+      }}>
+        <span style={{ fontSize: 26, fontWeight: 600, color: "#0f172a", lineHeight: 1 }}>{score}</span>
+        <span style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>/ 100</span>
+      </div>
+    </div>
+  );
+}
+function CategoryChart({ categories }) {
+  const scores = CATEGORIES.map((c) => categories?.[c] ?? 0);
+  const colors = scores.map(scoreColor);
+
+  const data = {
+    labels: CATEGORIES,
+    datasets: [{
+      data: scores,
+      backgroundColor: colors,
+      borderRadius: 5,
+      borderSkipped: false,
+      barThickness: 16,
+    }],
+  };
+
+  const options = {
+    indexAxis: "y",
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: { duration: 900, easing: "easeOutQuart" },
+    plugins: { legend: { display: false }, tooltip: {
+      callbacks: { label: (ctx) => ` ${ctx.raw} / 100` },
+    }},
+    scales: {
+      x: {
+        min: 0, max: 100,
+        grid: { color: "rgba(0,0,0,0.05)" },
+        ticks: {
+          color: "#94a3b8", font: { size: 11 },
+          callback: (v) => v + "%",
+          stepSize: 25,
+        },
+      },
+      y: {
+        grid: { display: false },
+        ticks: { color: "#64748b", font: { size: 12 }, padding: 6 },
+      },
+    },
+  };
+
+  const height = CATEGORIES.length * 44 + 48;
+
+  return (
+    <div style={{ position: "relative", width: "100%", height }}>
+      <Bar data={data} options={options} />
+    </div>
+  );
+}
+function ScoreCards({ categories }) {
+  return (
+    <div style={{
+      display: "grid",
+      gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+      gap: 10,
+    }}>
+      {CATEGORIES.map((cat) => {
+        const s = categories?.[cat] ?? 0;
+        const c = scoreColor(s);
+        return (
+          <div key={cat} style={{
+            background: "#f8fafc", borderRadius: 10,
+            padding: "12px 14px",
+          }}>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>{cat}</div>
+            <div style={{ fontSize: 20, fontWeight: 600, color: c }}>
+              {s}
+              <span style={{ fontSize: 12, fontWeight: 400, color: "#cbd5e1" }}> /100</span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+function ResumePreview({ phase, scanPct }) {
+  const lines = [80, 60, 90, 50, 70, 55, 85, 45, 65, 75, 50, 60];
+  return (
+    <div style={{ width: "100%", maxWidth: 280 }}>
+      <div style={{
+        background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
+        padding: "20px 18px", position: "relative", overflow: "hidden",
+        boxShadow: "0 2px 16px rgba(37,99,235,0.07)",
+      }}>
+        {lines.map((w, i) => (
+          <div key={i} style={{
+            height: i === 0 ? 12 : 7,
+            width: `${w}%`,
+            background: i === 0 ? "#1e3a5f" : i % 4 === 1 ? "#bfdbfe" : "#e2e8f0",
+            borderRadius: 3,
+            marginBottom: i === 0 ? 14 : 7,
+            marginLeft: i % 3 === 2 ? "10%" : 0,
+          }} />
+        ))}
+
+        {phase === "scanning" && (
+          <>
+            <div style={{
+              position: "absolute", left: 0, right: 0, height: 2,
+              background: "linear-gradient(90deg,transparent,#2563eb,#93c5fd,#2563eb,transparent)",
+              top: `${scanPct}%`, transition: "top 0.04s linear",
+              boxShadow: "0 0 10px 3px rgba(37,99,235,0.35)",
+            }} />
+            <div style={{
+              position: "absolute", inset: 0,
+              background: `linear-gradient(to bottom,rgba(37,99,235,0.05) ${scanPct}%,transparent ${scanPct}%)`,
+            }} />
+          </>
+        )}
+
+        {phase === "done" && (
+          <div style={{
+            position: "absolute", inset: 0,
+            background: "rgba(37,99,235,0.03)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            borderRadius: 12,
+          }}>
+            <span style={{ fontSize: 34 }}>✅</span>
+          </div>
+        )}
+      </div>
+
+      {phase === "scanning" && (
+        <div style={{ marginTop: 14 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#94a3b8", marginBottom: 5 }}>
+            <span>Analyzing resume...</span>
+            <span>{scanPct}%</span>
+          </div>
+          <div style={{ height: 3, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: "100%", width: `${scanPct}%`, background: "#2563eb", borderRadius: 3, transition: "width 0.04s linear" }} />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+export default function ATSPage() {
+  const [phase, setPhase] = useState("idle");
+  const [fileName, setFileName] = useState("");
+  const [atsData, setAtsData] = useState(null);
+  const [scanPct, setScanPct] = useState(0);
+  const fileRef = useRef();
+
+  const handleFile = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setFileName(file.name);
+    setPhase("uploading");
+
+    const formData = new FormData();
+    formData.append("resume", file);
+
+    try {
+      const res = await fetch(`${BASE}/upload/`, { method: "POST", body: formData });
+      const data = await res.json();
+      if (!res.ok) { alert(data.error); setPhase("idle"); return; }
+
+      setPhase("scanning");
+      setScanPct(0);
+      let pct = 0;
+      const interval = setInterval(() => {
+        pct = Math.min(pct + 1.8, 100);
+        setScanPct(Math.round(pct));
+        if (pct >= 100) clearInterval(interval);
+      }, 35);
+
+      const atsRes = await fetch(`${BASE}/ats-score/`, { method: "POST" });
+      const atsJson = await atsRes.json();
+
+      await new Promise((r) => setTimeout(r, 2200));
+      clearInterval(interval);
+      setScanPct(100);
+      setAtsData(atsJson);
+      setPhase("done");
+    } catch {
+      alert("Server connect ஆகல. Django running-ஆ இருக்கா check பண்ணுங்க.");
+      setPhase("idle");
+    }
+  };
+
+  const st = atsData ? (LEVEL_STYLES[atsData.level] || LEVEL_STYLES["Average"]) : null;
+  const isScanning = phase === "scanning" || phase === "done";
+  const btnLabel = phase === "idle" ? "⬆ Upload Resume" : phase === "uploading" ? "Uploading..." : "Scanning...";
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      display: "flex",
+      flexDirection: "row",
+      flexWrap: "wrap",
+      fontFamily: "'Inter', sans-serif",
+      background: "#fff",
+    }}>
+
+      {/* ── LEFT PANEL ── */}
+      <div style={{
+        width: "clamp(280px, 40%, 420px)",
+        borderRight: "1px solid #f1f5f9",
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        padding: "48px 32px",
+        gap: 20,
+        boxSizing: "border-box",
+      }}>
+        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#0f172a", marginBottom: 4, textAlign: "center" }}>
+          ATS Resume Scanner
+        </h2>
+        <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", lineHeight: 1.6, maxWidth: 260 }}>
+          Upload your PDF resume to get an instant ATS compatibility score
+        </p>
+
+        <input ref={fileRef} type="file" accept=".pdf" onChange={handleFile} style={{ display: "none" }} />
+        <button
+          onClick={() => fileRef.current?.click()}
+          disabled={phase === "uploading" || phase === "scanning"}
+          style={{
+            padding: "12px 32px",
+            background: (phase === "uploading" || phase === "scanning") ? "#93c5fd" : "#2563eb",
+            color: "#fff", border: "none", borderRadius: 10, fontSize: 14,
+            fontWeight: 600, cursor: (phase === "uploading" || phase === "scanning") ? "not-allowed" : "pointer",
+            transition: "background 0.2s",
+          }}
+        >
+          {btnLabel}
+        </button>
+
+        {fileName && (
+          <p style={{ fontSize: 12, color: "#94a3b8" }}>📄 {fileName}</p>
+        )}
+
+        {isScanning && (
+          <ResumePreview phase={phase} scanPct={scanPct} />
+        )}
+      </div>
+      <div style={{
+        flex: 1,
+        minWidth: 300,
+        padding: "40px 32px",
+        overflowY: "auto",
+        boxSizing: "border-box",
+        display: "flex",
+        flexDirection: "column",
+        gap: 28,
+      }}>
+
+        {!atsData ? (
+          <div style={{
+            flex: 1, display: "flex", flexDirection: "column",
+            alignItems: "center", justifyContent: "center", gap: 12,
+            minHeight: 320,
+          }}>
+            <span style={{ fontSize: 52, opacity: 0.2 }}>📊</span>
+            <p style={{ fontSize: 14, color: "#cbd5e1" }}>ATS score will appear here after scanning</p>
+          </div>
+        ) : (
+          <div style={{ animation: "fadeUp 0.45s ease" }}>
+            <style>{`
+              @keyframes fadeUp {
+                from { opacity: 0; transform: translateY(14px); }
+                to   { opacity: 1; transform: translateY(0); }
+              }
+              @media (max-width: 640px) {
+                .ats-header { flex-direction: column !important; align-items: flex-start !important; }
+              }
+            `}</style>
+            <div className="ats-header" style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", marginBottom: 32 }}>
+              <ScoreRing score={atsData.overall_score} color={st.bar} />
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <span style={{
+                  display: "inline-block", fontSize: 11, fontWeight: 600,
+                  padding: "3px 12px", borderRadius: 20,
+                  background: st.bg, color: st.text, marginBottom: 8,
+                }}>
+                  {atsData.level}
+                </span>
+                <div style={{ fontSize: 17, fontWeight: 600, color: "#0f172a", marginBottom: 5 }}>
+                  ATS analysis complete
+                </div>
+                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.65, maxWidth: 380 }}>
+                  {atsData.summary}
+                </p>
+              </div>
+            </div>
+            <div style={{ marginBottom: 28 }}>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 14 }}>
+                Category breakdown
+              </p>
+              <CategoryChart categories={atsData.categories} />
+            </div>
+            <div>
+              <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 14 }}>
+                Score summary
+              </p>
+              <ScoreCards categories={atsData.categories} />
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
