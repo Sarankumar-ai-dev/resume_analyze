@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 
-const BASE = "http://127.0.0.1:8000/api";
+const BASE ="https://resume-analyze-ovkr.onrender.com/api";
 
 export default function App() {
   const [messages,setMessages]=useState([

@@ -4,7 +4,7 @@ import { Bar } from "react-chartjs-2";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
-const BASE = "http://127.0.0.1:8000/api";
+const BASE ="https://resume-analyze-ovkr.onrender.com/api";
 
 const CATEGORIES=["Contact Information","Work Experience","Education","Skills","Keywords","Formatting","Projects",];
 
@@ -248,7 +248,6 @@ export default function ATSPage() {
       background: "#fff",
     }}>
 
-      {/* ── LEFT PANEL ── */}
       <div style={{
         width: "clamp(280px, 40%, 420px)",
         borderRight: "1px solid #f1f5f9",

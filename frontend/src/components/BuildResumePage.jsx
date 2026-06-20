@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-const BASE = "http://127.0.0.1:8000/api";
+const BASE ="https://resume-analyze-ovkr.onrender.com/api";
 
 const FIELDS=[
   {key:"name",        label:"Full Name",    placeholder:"Sarankumar S",                  icon:"👤" },
