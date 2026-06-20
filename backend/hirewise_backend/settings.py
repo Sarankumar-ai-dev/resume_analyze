@@ -88,6 +88,9 @@ DATABASES = {
     }
 }
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = [
+    "https://resume-analyze.vercel.app",
+]
 STATIC_URL = 'static/'
 
 STATIC_ROOT = BASE_DIR / "staticfiles"
