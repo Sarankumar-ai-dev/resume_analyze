@@ -5,6 +5,9 @@ from rest_framework.response import Response
 from openai import OpenAI
 import json
 import os
+from dotenv import load_dotenv
+
+load_dotenv()
 resume_text_storage = ""
 
 client = OpenAI(
@@ -36,36 +39,6 @@ EXAMPLES:
 - "Salary enna expect pannalam?" → CAREER question → answer based on market knowledge
 """
 
-ATS_PROMPT = """You are an expert ATS (Applicant Tracking System) resume analyzer.
-
-Analyze the resume and return ONLY a valid JSON object with no extra text, no markdown, no code blocks.
-
-Score each category from 0 to 100:
-
-{
-  "overall_score": <number>,
-  "categories": {
-    "Contact Information": <number>,
-    "Work Experience": <number>,
-    "Education": <number>,
-    "Skills": <number>,
-    "Keywords": <number>,
-    "Formatting": <number>,
-    "Projects": <number>
-  },
-  "level": "<Excellent | Good | Average | Needs Improvement>",
-  "summary": "<2 sentence summary in English>"
-}
-
-SCORING GUIDE:
-- Contact Information: email, phone, linkedin, github present → high score
-- Work Experience: internships, jobs, roles with descriptions → high score
-- Education: degree, institution, CGPA mentioned → high score
-- Skills: technical + soft skills listed → high score
-- Keywords: industry-relevant keywords present → high score
-- Formatting: clear sections, readable structure → high score
-- Projects: real projects with tech stack mentioned → high score
-"""
 
 RESUME_BUILD_PROMPT = """You are an expert resume writer and career coach.
 
@@ -170,6 +143,84 @@ def upload_resume(request):
         return Response({"error": f"Failed to process PDF: {str(e)}"}, status=500)
 
 
+
+ATS_PROMPT = """You are a STRICT ATS resume analyzer. You must differentiate resumes accurately.
+
+CRITICAL RULES:
+- Most resumes score between 30–75. Only truly exceptional resumes get 80+.
+- A resume missing ANY major section gets heavily penalized.
+- Be harsh. Real ATS systems reject 75% of resumes.
+
+Return ONLY valid JSON, no markdown, no extra text.
+
+{
+  "overall_score": <number 0-100>,
+  "categories": {
+    "Contact Information": <number>,
+    "Work Experience": <number>,
+    "Education": <number>,
+    "Skills": <number>,
+    "Keywords": <number>,
+    "Formatting": <number>,
+    "Projects": <number>
+  },
+  "level": "<Excellent | Good | Average | Needs Improvement>",
+  "summary": "<2 sentence honest summary in English>"
+}
+
+STRICT SCORING RULES:
+
+Contact Information (0-100):
+- Has email + phone + LinkedIn + GitHub + location → 90-100
+- Missing LinkedIn or GitHub → max 70
+- Missing phone or email → max 40
+- Only name present → 10-20
+
+Work Experience (0-100):
+- 3+ jobs with bullet points, metrics, action verbs → 85-100
+- 1-2 internships with descriptions → 50-70
+- Jobs listed but no descriptions → 20-40
+- No work experience at all → 0-15
+
+Education (0-100):
+- Degree + institution + GPA + graduation year → 80-100
+- Degree + institution, no GPA → 55-70
+- Only degree name, missing details → 30-50
+- No education section → 0
+
+Skills (0-100):
+- 15+ relevant technical skills, categorized → 85-100
+- 8-14 skills listed → 55-75
+- 3-7 skills → 25-50
+- 1-2 skills or none → 0-20
+
+Keywords (0-100):
+- Industry-specific terms, tools, technologies matching job market → 80-100
+- Some relevant keywords → 45-65
+- Generic words only → 15-35
+- No keywords → 0-10
+
+Formatting (0-100):
+- Clear sections, consistent fonts, ATS-parseable, no tables/columns → 80-100
+- Minor inconsistencies → 55-75
+- Tables, columns, images (ATS unfriendly) → 15-40
+- Wall of text, no structure → 0-20
+
+Projects (0-100):
+- 3+ projects with tech stack + github links + impact → 85-100
+- 2 projects with some detail → 55-70
+- 1 project, vague description → 25-45
+- No projects section → 0-10
+
+LEVEL RULES (based on overall_score):
+- overall_score >= 80 → "Excellent"
+- overall_score >= 60 → "Good"
+- overall_score >= 40 → "Average"
+- overall_score < 40 → "Needs Improvement"
+
+Overall score = weighted average:
+Work Experience × 0.25 + Skills × 0.20 + Keywords × 0.20 + Projects × 0.15 + Education × 0.10 + Formatting × 0.05 + Contact × 0.05
+"""
 @api_view(["POST"])
 def ats_score(request):
     global resume_text_storage
@@ -180,18 +231,56 @@ def ats_score(request):
         }, status=400)
 
     try:
+        # Count actual content to calibrate
+        word_count = len(resume_text_storage.split())
+        
         response = client.chat.completions.create(
             model="openai/gpt-4o-mini",
             messages=[
                 {"role": "system", "content": ATS_PROMPT},
-                {"role": "user", "content": f"Analyze this resume:\n\n{resume_text_storage}"}
+                {
+                    "role": "user",
+                    "content": (
+                        f"Analyze this resume strictly. Word count: {word_count} words.\n"
+                        f"A resume with {word_count} words is likely "
+                        f"{'too short (penalize heavily)' if word_count < 200 else 'adequate length' if word_count < 600 else 'good length'}.\n\n"
+                        f"Resume content:\n{resume_text_storage}"
+                    )
+                }
             ],
-            temperature=0.1
+            temperature=0.3,  # Slight randomness so scores differ
         )
 
         raw = response.choices[0].message.content.strip()
         raw = raw.replace("```json", "").replace("```", "").strip()
         result = json.loads(raw)
+
+        # Server-side validation: recalculate overall score
+        cats = result.get("categories", {})
+        weights = {
+            "Work Experience": 0.25,
+            "Skills": 0.20,
+            "Keywords": 0.20,
+            "Projects": 0.15,
+            "Education": 0.10,
+            "Formatting": 0.05,
+            "Contact Information": 0.05,
+        }
+        calculated_score = sum(
+            cats.get(k, 0) * w for k, w in weights.items()
+        )
+        result["overall_score"] = round(calculated_score)
+
+        # Enforce level based on calculated score
+        score = result["overall_score"]
+        if score >= 80:
+            result["level"] = "Excellent"
+        elif score >= 60:
+            result["level"] = "Good"
+        elif score >= 40:
+            result["level"] = "Average"
+        else:
+            result["level"] = "Needs Improvement"
 
         return Response(result)
 

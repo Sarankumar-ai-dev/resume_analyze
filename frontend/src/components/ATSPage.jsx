@@ -1,18 +1,32 @@
 import { useState, useRef, useEffect } from "react";
-import { Chart as ChartJS,CategoryScale,LinearScale,BarElement,Tooltip,} from "chart.js";
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Tooltip,
+} from "chart.js";
 import { Bar } from "react-chartjs-2";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Tooltip);
 
-const BASE ="https://resume-analyze-ovkr.onrender.com/api";
+const BASE = "https://resume-analyze-ovkr.onrender.com/api";
 
-const CATEGORIES=["Contact Information","Work Experience","Education","Skills","Keywords","Formatting","Projects",];
+const CATEGORIES = [
+  "Contact Information",
+  "Work Experience",
+  "Education",
+  "Skills",
+  "Keywords",
+  "Formatting",
+  "Projects",
+];
 
-const LEVEL_STYLES={
-  Excellent:         {bg:"#e6f4ea",text: "#1a7f37",bar: "#2da44e" },
-  Good:              {bg:"#dbeafe",text: "#1d4ed8",bar: "#2563eb" },
-  Average:           {bg:"#fef9c3",text: "#92400e",bar: "#d97706" },
-  "Needs Improvement":{bg:"#fee2e2",text: "#b91c1c",bar: "#ef4444" },
+const LEVEL_STYLES = {
+  Excellent:           { bg: "#e6f4ea", text: "#1a7f37", bar: "#2da44e" },
+  Good:                { bg: "#dbeafe", text: "#1d4ed8", bar: "#2563eb" },
+  Average:             { bg: "#fef9c3", text: "#92400e", bar: "#d97706" },
+  "Needs Improvement": { bg: "#fee2e2", text: "#b91c1c", bar: "#ef4444" },
 };
 
 function scoreColor(s) {
@@ -22,19 +36,20 @@ function scoreColor(s) {
   return "#ef4444";
 }
 
-function ScoreRing({ score, color }){
-  const r=44;
-  const circ=2 * Math.PI * r;
-  const [dash,setDash]=useState(0);
+/* ── Score Ring ─────────────────────────────────────────────────────────── */
+function ScoreRing({ score, color }) {
+  const r = 44;
+  const circ = 2 * Math.PI * r;
+  const [dash, setDash] = useState(0);
 
   useEffect(() => {
-    const t =setTimeout(() => setDash((score / 100) * circ),80);
+    const t = setTimeout(() => setDash((score / 100) * circ), 80);
     return () => clearTimeout(t);
-  },[score,circ]);
+  }, [score, circ]);
 
   return (
-    <div style={{ position:"relative",width:108,height:108,flexShrink:0}}>
-      <svg width="108" height="108" style={{ transform: "rotate(-90deg)"}}>
+    <div style={{ position: "relative", width: 108, height: 108, flexShrink: 0 }}>
+      <svg width="108" height="108" style={{ transform: "rotate(-90deg)" }}>
         <circle cx="54" cy="54" r={r} fill="none" stroke="#f1f5f9" strokeWidth="9" />
         <circle
           cx="54" cy="54" r={r} fill="none"
@@ -49,12 +64,14 @@ function ScoreRing({ score, color }){
         display: "flex", flexDirection: "column",
         alignItems: "center", justifyContent: "center",
       }}>
-        <span style={{ fontSize: 26, fontWeight: 600, color: "#0f172a", lineHeight: 1 }}>{score}</span>
+        <span style={{ fontSize: 26, fontWeight: 700, color: "#0f172a", lineHeight: 1 }}>{score}</span>
         <span style={{ fontSize: 11, color: "#94a3b8", marginTop: 2 }}>/ 100</span>
       </div>
     </div>
   );
 }
+
+/* ── Category Bar Chart ─────────────────────────────────────────────────── */
 function CategoryChart({ categories }) {
   const scores = CATEGORIES.map((c) => categories?.[c] ?? 0);
   const colors = scores.map(scoreColor);
@@ -66,7 +83,7 @@ function CategoryChart({ categories }) {
       backgroundColor: colors,
       borderRadius: 5,
       borderSkipped: false,
-      barThickness: 16,
+      barThickness: 14,
     }],
   };
 
@@ -75,9 +92,12 @@ function CategoryChart({ categories }) {
     responsive: true,
     maintainAspectRatio: false,
     animation: { duration: 900, easing: "easeOutQuart" },
-    plugins: { legend: { display: false }, tooltip: {
-      callbacks: { label: (ctx) => ` ${ctx.raw} / 100` },
-    }},
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: { label: (ctx) => ` ${ctx.raw} / 100` },
+      },
+    },
     scales: {
       x: {
         min: 0, max: 100,
@@ -95,19 +115,19 @@ function CategoryChart({ categories }) {
     },
   };
 
-  const height = CATEGORIES.length * 44 + 48;
-
   return (
-    <div style={{ position: "relative", width: "100%", height }}>
+    <div style={{ position: "relative", width: "100%", height: CATEGORIES.length * 42 + 40 }}>
       <Bar data={data} options={options} />
     </div>
   );
 }
+
+/* ── Score Cards ────────────────────────────────────────────────────────── */
 function ScoreCards({ categories }) {
   return (
     <div style={{
       display: "grid",
-      gridTemplateColumns: "repeat(auto-fit, minmax(130px, 1fr))",
+      gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))",
       gap: 10,
     }}>
       {CATEGORIES.map((cat) => {
@@ -115,11 +135,13 @@ function ScoreCards({ categories }) {
         const c = scoreColor(s);
         return (
           <div key={cat} style={{
-            background: "#f8fafc", borderRadius: 10,
+            background: "#f8fafc",
+            borderRadius: 10,
             padding: "12px 14px",
+            border: "1px solid #f1f5f9",
           }}>
-            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 4 }}>{cat}</div>
-            <div style={{ fontSize: 20, fontWeight: 600, color: c }}>
+            <div style={{ fontSize: 11, color: "#94a3b8", marginBottom: 5, lineHeight: 1.4 }}>{cat}</div>
+            <div style={{ fontSize: 22, fontWeight: 700, color: c }}>
               {s}
               <span style={{ fontSize: 12, fontWeight: 400, color: "#cbd5e1" }}> /100</span>
             </div>
@@ -129,13 +151,19 @@ function ScoreCards({ categories }) {
     </div>
   );
 }
+
+/* ── Resume Preview / Scan Animation ───────────────────────────────────── */
 function ResumePreview({ phase, scanPct }) {
   const lines = [80, 60, 90, 50, 70, 55, 85, 45, 65, 75, 50, 60];
   return (
-    <div style={{ width: "100%", maxWidth: 280 }}>
+    <div style={{ width: "100%", maxWidth: 260 }}>
       <div style={{
-        background: "#fff", border: "1px solid #e2e8f0", borderRadius: 12,
-        padding: "20px 18px", position: "relative", overflow: "hidden",
+        background: "#fff",
+        border: "1px solid #e2e8f0",
+        borderRadius: 12,
+        padding: "20px 18px",
+        position: "relative",
+        overflow: "hidden",
         boxShadow: "0 2px 16px rgba(37,99,235,0.07)",
       }}>
         {lines.map((w, i) => (
@@ -154,7 +182,8 @@ function ResumePreview({ phase, scanPct }) {
             <div style={{
               position: "absolute", left: 0, right: 0, height: 2,
               background: "linear-gradient(90deg,transparent,#2563eb,#93c5fd,#2563eb,transparent)",
-              top: `${scanPct}%`, transition: "top 0.04s linear",
+              top: `${scanPct}%`,
+              transition: "top 0.04s linear",
               boxShadow: "0 0 10px 3px rgba(37,99,235,0.35)",
             }} />
             <div style={{
@@ -178,65 +207,106 @@ function ResumePreview({ phase, scanPct }) {
 
       {phase === "scanning" && (
         <div style={{ marginTop: 14 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#94a3b8", marginBottom: 5 }}>
+          <div style={{
+            display: "flex", justifyContent: "space-between",
+            fontSize: 12, color: "#94a3b8", marginBottom: 5,
+          }}>
             <span>Analyzing resume...</span>
             <span>{scanPct}%</span>
           </div>
           <div style={{ height: 3, background: "#e2e8f0", borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: "100%", width: `${scanPct}%`, background: "#2563eb", borderRadius: 3, transition: "width 0.04s linear" }} />
+            <div style={{
+              height: "100%", width: `${scanPct}%`,
+              background: "#2563eb", borderRadius: 3,
+              transition: "width 0.04s linear",
+            }} />
           </div>
         </div>
       )}
     </div>
   );
 }
+
+/* ── Main Page ──────────────────────────────────────────────────────────── */
 export default function ATSPage() {
-  const [phase, setPhase] = useState("idle");
+  const [phase, setPhase]       = useState("idle");   // idle | uploading | scanning | done | error
   const [fileName, setFileName] = useState("");
-  const [atsData, setAtsData] = useState(null);
-  const [scanPct, setScanPct] = useState(0);
+  const [atsData, setAtsData]   = useState(null);
+  const [scanPct, setScanPct]   = useState(0);
+  const [errMsg, setErrMsg]     = useState("");
   const fileRef = useRef();
+
+  // Allow re-upload anytime (idle or done or error)
+  const canUpload = phase === "idle" || phase === "done" || phase === "error";
 
   const handleFile = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
+
+    // Reset state
     setFileName(file.name);
+    setAtsData(null);
+    setErrMsg("");
     setPhase("uploading");
 
     const formData = new FormData();
     formData.append("resume", file);
 
     try {
+      /* 1. Upload */
       const res = await fetch(`${BASE}/upload/`, { method: "POST", body: formData });
       const data = await res.json();
-      if (!res.ok) { alert(data.error); setPhase("idle"); return; }
+      if (!res.ok) {
+        setErrMsg(data.error || "Upload failed.");
+        setPhase("error");
+        return;
+      }
 
+      /* 2. Animate scan bar */
       setPhase("scanning");
       setScanPct(0);
       let pct = 0;
       const interval = setInterval(() => {
-        pct = Math.min(pct + 1.8, 100);
+        pct = Math.min(pct + 1.8, 95); // stop at 95 until API returns
         setScanPct(Math.round(pct));
-        if (pct >= 100) clearInterval(interval);
+        if (pct >= 95) clearInterval(interval);
       }, 35);
 
-      const atsRes = await fetch(`${BASE}/ats-score/`, { method: "POST" });
+      /* 3. ATS score */
+      const atsRes  = await fetch(`${BASE}/ats-score/`, { method: "POST" });
       const atsJson = await atsRes.json();
 
-      await new Promise((r) => setTimeout(r, 2200));
+      if (!atsRes.ok) {
+        clearInterval(interval);
+        setErrMsg(atsJson.error || "ATS analysis failed.");
+        setPhase("error");
+        return;
+      }
+
+      /* 4. Fill bar to 100, then show results */
       clearInterval(interval);
       setScanPct(100);
+      await new Promise((r) => setTimeout(r, 600));
+
       setAtsData(atsJson);
       setPhase("done");
-    } catch {
-      alert("Server connect ஆகல. Django running-ஆ இருக்கா check பண்ணுங்க.");
-      setPhase("idle");
+    } catch (err) {
+      setErrMsg("Server-ஐ connect பண்ண முடியல. Backend running-ஆ இருக்கா check பண்ணுங்க.");
+      setPhase("error");
     }
+
+    // Reset file input so same file can be re-uploaded
+    if (fileRef.current) fileRef.current.value = "";
   };
 
   const st = atsData ? (LEVEL_STYLES[atsData.level] || LEVEL_STYLES["Average"]) : null;
   const isScanning = phase === "scanning" || phase === "done";
-  const btnLabel = phase === "idle" ? "⬆ Upload Resume" : phase === "uploading" ? "Uploading..." : "Scanning...";
+
+  const btnLabel =
+    phase === "uploading" ? "Uploading…"
+    : phase === "scanning" ? "Scanning…"
+    : atsData             ? "⬆ Scan Another"
+    : "⬆ Upload Resume";
 
   return (
     <div style={{
@@ -244,51 +314,106 @@ export default function ATSPage() {
       display: "flex",
       flexDirection: "row",
       flexWrap: "wrap",
-      fontFamily: "'Inter', sans-serif",
+      fontFamily: "'Inter', system-ui, sans-serif",
       background: "#fff",
     }}>
+      <style>{`
+        @keyframes fadeUp {
+          from { opacity: 0; transform: translateY(14px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes pulse-dot {
+          0%, 100% { opacity: 1; } 50% { opacity: 0.3; }
+        }
+      `}</style>
 
+      {/* ── Left Panel ── */}
       <div style={{
-        width: "clamp(280px, 40%, 420px)",
+        width: "clamp(260px, 38%, 380px)",
         borderRight: "1px solid #f1f5f9",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
-        padding: "48px 32px",
+        padding: "48px 28px",
         gap: 20,
         boxSizing: "border-box",
+        position: "sticky",
+        top: 0,
+        height: "100vh",
+        overflowY: "auto",
       }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, color: "#0f172a", marginBottom: 4, textAlign: "center" }}>
-          ATS Resume Scanner
-        </h2>
-        <p style={{ fontSize: 13, color: "#64748b", textAlign: "center", lineHeight: 1.6, maxWidth: 260 }}>
-          Upload your PDF resume to get an instant ATS compatibility score
-        </p>
+        {/* Logo / Title */}
+        <div style={{ textAlign: "center", marginBottom: 4 }}>
+          <div style={{
+            width: 44, height: 44, borderRadius: 12,
+            background: "linear-gradient(135deg,#2563eb,#60a5fa)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            margin: "0 auto 14px",
+            boxShadow: "0 4px 14px rgba(37,99,235,0.3)",
+          }}>
+            <span style={{ fontSize: 22 }}>📄</span>
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#0f172a", margin: 0 }}>
+            ATS Resume Scanner
+          </h2>
+          <p style={{ fontSize: 13, color: "#64748b", marginTop: 6, lineHeight: 1.6, maxWidth: 240 }}>
+            Upload your PDF resume to get an instant ATS compatibility score
+          </p>
+        </div>
 
-        <input ref={fileRef} type="file" accept=".pdf" onChange={handleFile} style={{ display: "none" }} />
+        {/* Upload Button */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept=".pdf"
+          onChange={handleFile}
+          style={{ display: "none" }}
+        />
         <button
-          onClick={() => fileRef.current?.click()}
-          disabled={phase === "uploading" || phase === "scanning"}
+          onClick={() => canUpload && fileRef.current?.click()}
+          disabled={!canUpload}
           style={{
-            padding: "12px 32px",
-            background: (phase === "uploading" || phase === "scanning") ? "#93c5fd" : "#2563eb",
-            color: "#fff", border: "none", borderRadius: 10, fontSize: 14,
-            fontWeight: 600, cursor: (phase === "uploading" || phase === "scanning") ? "not-allowed" : "pointer",
-            transition: "background 0.2s",
+            padding: "11px 28px",
+            background: !canUpload ? "#93c5fd" : "#2563eb",
+            color: "#fff",
+            border: "none",
+            borderRadius: 10,
+            fontSize: 14,
+            fontWeight: 600,
+            cursor: !canUpload ? "not-allowed" : "pointer",
+            transition: "background 0.2s, transform 0.1s",
+            boxShadow: canUpload ? "0 2px 8px rgba(37,99,235,0.25)" : "none",
           }}
+          onMouseDown={(e) => canUpload && (e.currentTarget.style.transform = "scale(0.97)")}
+          onMouseUp={(e)   => (e.currentTarget.style.transform = "scale(1)")}
         >
           {btnLabel}
         </button>
 
+        {/* File name */}
         {fileName && (
-          <p style={{ fontSize: 12, color: "#94a3b8" }}>📄 {fileName}</p>
+          <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>📄 {fileName}</p>
         )}
 
+        {/* Error */}
+        {phase === "error" && (
+          <div style={{
+            background: "#fee2e2", color: "#b91c1c",
+            borderRadius: 8, padding: "10px 14px",
+            fontSize: 12, maxWidth: 240, textAlign: "center", lineHeight: 1.5,
+          }}>
+            ⚠️ {errMsg}
+          </div>
+        )}
+
+        {/* Scan preview */}
         {isScanning && (
           <ResumePreview phase={phase} scanPct={scanPct} />
         )}
       </div>
+
+      {/* ── Right Panel ── */}
       <div style={{
         flex: 1,
         minWidth: 300,
@@ -299,54 +424,77 @@ export default function ATSPage() {
         flexDirection: "column",
         gap: 28,
       }}>
-
         {!atsData ? (
+          /* Empty state */
           <div style={{
             flex: 1, display: "flex", flexDirection: "column",
-            alignItems: "center", justifyContent: "center", gap: 12,
-            minHeight: 320,
+            alignItems: "center", justifyContent: "center",
+            gap: 12, minHeight: 320,
           }}>
-            <span style={{ fontSize: 52, opacity: 0.2 }}>📊</span>
-            <p style={{ fontSize: 14, color: "#cbd5e1" }}>ATS score will appear here after scanning</p>
+            <span style={{ fontSize: 52, opacity: 0.18 }}>📊</span>
+            <p style={{ fontSize: 14, color: "#cbd5e1", margin: 0 }}>
+              {phase === "scanning"
+                ? "Analyzing your resume…"
+                : "ATS score will appear here after scanning"}
+            </p>
+            {phase === "scanning" && (
+              <div style={{ display: "flex", gap: 5, marginTop: 4 }}>
+                {[0, 1, 2].map((i) => (
+                  <div key={i} style={{
+                    width: 6, height: 6, borderRadius: "50%",
+                    background: "#2563eb",
+                    animation: `pulse-dot 1.2s ease-in-out ${i * 0.2}s infinite`,
+                  }} />
+                ))}
+              </div>
+            )}
           </div>
         ) : (
+          /* Results */
           <div style={{ animation: "fadeUp 0.45s ease" }}>
-            <style>{`
-              @keyframes fadeUp {
-                from { opacity: 0; transform: translateY(14px); }
-                to   { opacity: 1; transform: translateY(0); }
-              }
-              @media (max-width: 640px) {
-                .ats-header { flex-direction: column !important; align-items: flex-start !important; }
-              }
-            `}</style>
-            <div className="ats-header" style={{ display: "flex", alignItems: "center", gap: 24, flexWrap: "wrap", marginBottom: 32 }}>
+
+            {/* Header: ring + summary */}
+            <div style={{
+              display: "flex", alignItems: "center",
+              gap: 24, flexWrap: "wrap", marginBottom: 32,
+            }}>
               <ScoreRing score={atsData.overall_score} color={st.bar} />
               <div style={{ flex: 1, minWidth: 180 }}>
                 <span style={{
-                  display: "inline-block", fontSize: 11, fontWeight: 600,
+                  display: "inline-block", fontSize: 11, fontWeight: 700,
                   padding: "3px 12px", borderRadius: 20,
                   background: st.bg, color: st.text, marginBottom: 8,
+                  letterSpacing: "0.03em",
                 }}>
                   {atsData.level}
                 </span>
-                <div style={{ fontSize: 17, fontWeight: 600, color: "#0f172a", marginBottom: 5 }}>
+                <div style={{ fontSize: 17, fontWeight: 700, color: "#0f172a", marginBottom: 5 }}>
                   ATS analysis complete
                 </div>
-                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.65, maxWidth: 380 }}>
+                <p style={{ fontSize: 13, color: "#64748b", lineHeight: 1.65, maxWidth: 380, margin: 0 }}>
                   {atsData.summary}
                 </p>
               </div>
             </div>
+
+            {/* Bar chart */}
             <div style={{ marginBottom: 28 }}>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 14 }}>
-                Category breakdown
+              <p style={{
+                fontSize: 11, fontWeight: 700, color: "#94a3b8",
+                letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 14,
+              }}>
+                Category Breakdown
               </p>
               <CategoryChart categories={atsData.categories} />
             </div>
+
+            {/* Score cards */}
             <div>
-              <p style={{ fontSize: 11, fontWeight: 600, color: "#94a3b8", letterSpacing: "0.06em", textTransform: "uppercase", marginBottom: 14 }}>
-                Score summary
+              <p style={{
+                fontSize: 11, fontWeight: 700, color: "#94a3b8",
+                letterSpacing: "0.07em", textTransform: "uppercase", marginBottom: 14,
+              }}>
+                Score Summary
               </p>
               <ScoreCards categories={atsData.categories} />
             </div>
