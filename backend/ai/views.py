@@ -290,39 +290,90 @@ def ats_score(request):
         return Response({"error": f"ATS analysis failed: {str(e)}"}, status=500)
 
 
+RESUME_BUILD_PROMPT = """You are an expert resume writer and career coach.
+
+Create a professional ATS-friendly resume JSON from the user's input.
+
+Return ONLY valid JSON, no markdown, no extra text.
+
+CRITICAL RULES:
+- Use ONLY the information the user has provided
+- If a field is empty, missing, or says "not provided" → set it to null or empty array []
+- Do NOT invent, assume, or hallucinate any information
+- Do NOT add fake education, experience, or projects
+- Only expand and rephrase what the user actually gave you into professional language
+
+{
+  "name": "<full name>",
+  "contact": {
+    "email": "<email or empty string>",
+    "phone": "<phone or empty string>",
+    "linkedin": "<linkedin or empty string>",
+    "github": "<github or empty string>",
+    "location": "<location or empty string>"
+  },
+  "summary": "<3-4 sentence professional summary using ONLY provided info. If too little info, write a short 1-2 sentence summary>",
+  "skills": {
+    "technical": ["only skills the user mentioned"],
+    "soft": ["only soft skills the user mentioned or clearly implied"]
+  },
+  "experience": [
+    {
+      "title": "<job title>",
+      "company": "<company>",
+      "duration": "<duration>",
+      "points": ["professional bullet using what user described"]
+    }
+  ],
+  "education": [
+    {
+      "degree": "<degree>",
+      "institution": "<institution>",
+      "year": "<year>",
+      "cgpa": "<cgpa or empty string>"
+    }
+  ],
+  "projects": [
+    {
+      "name": "<project name>",
+      "tech": ["tech stack mentioned"],
+      "description": "<description from user input>",
+      "points": ["what user said they built or achieved"]
+    }
+  ],
+  "achievements": ["only achievements user mentioned"],
+  "certifications": ["only certifications user mentioned"]
+}
+
+If experience is not provided → "experience": []
+If projects is not provided → "projects": []
+If achievements is not provided → "achievements": []
+If education is not provided → "education": []
+"""
 @api_view(["POST"])
 def build_resume(request):
     data = request.data
 
+    
+    def field(key, label):
+        val = data.get(key, "").strip()
+        return f"{label}:\n{val}\n" if val else f"{label}:\nnot provided\n"
+
     user_input = f"""
-Name: {data.get('name', '')}
-Email: {data.get('email', '')}
-Phone: {data.get('phone', '')}
-LinkedIn: {data.get('linkedin', '')}
-GitHub: {data.get('github', '')}
-Location: {data.get('location', '')}
-Job Role Target: {data.get('target_role', '')}
-
-About Me / Description:
-{data.get('description', '')}
-
-Skills:
-{data.get('skills', '')}
-
-Work Experience:
-{data.get('experience', '')}
-
-Education:
-{data.get('education', '')}
-
-Projects:
-{data.get('projects', '')}
-
-Achievements:
-{data.get('achievements', '')}
-
-Certifications:
-{data.get('certifications', '')}
+{field('name',          'Name')}
+{field('email',         'Email')}
+{field('phone',         'Phone')}
+{field('linkedin',      'LinkedIn')}
+{field('github',        'GitHub')}
+{field('location',      'Location')}
+{field('target_role',   'Target Job Role')}
+{field('description',   'About Me')}
+{field('skills',        'Skills')}
+{field('experience',    'Work Experience')}
+{field('education',     'Education')}
+{field('projects',      'Projects')}
+{field('achievements',  'Achievements')}
+{field('certifications','Certifications')}
 """
 
     try:
@@ -330,9 +381,9 @@ Certifications:
             model="openai/gpt-4o-mini",
             messages=[
                 {"role": "system", "content": RESUME_BUILD_PROMPT},
-                {"role": "user", "content": user_input}
+                {"role": "user",   "content": user_input}
             ],
-            temperature=0.4
+            temperature=0.2,  # Low = less hallucination
         )
 
         raw = response.choices[0].message.content.strip()
@@ -345,8 +396,6 @@ Certifications:
         return Response({"error": "Failed to parse resume response"}, status=500)
     except Exception as e:
         return Response({"error": f"Resume build failed: {str(e)}"}, status=500)
-
-
 @api_view(["POST"])
 def chat(request):
     global resume_text_storage
